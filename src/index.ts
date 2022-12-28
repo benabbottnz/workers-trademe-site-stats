@@ -1,35 +1,20 @@
-/**
- * Welcome to Cloudflare Workers! This is your first scheduled worker.
- *
- * - Run `wrangler dev --local` in your terminal to start a development server
- * - Run `curl "http://localhost:8787/cdn-cgi/mf/scheduled"` to trigger the scheduled event
- * - Go back to the console to see what your worker has logged
- * - Update the Cron trigger in wrangler.toml (see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers)
- * - Run `wrangler publish --name my-worker` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/runtime-apis/scheduled-event/
- */
-
 export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
 	DB: D1Database;
 }
 
 interface SiteStats {
 	MembersOnline: number;
-	ActiveMembers: number,
+	ActiveMembers: number;
 	ActiveListings: number;
+	/** @deprecated https://developer.trademe.co.nz/api-reference/catalogue-methods/retrieve-site-statistics **/
 	AverageTimeSpent: string;
+	/** @deprecated https://developer.trademe.co.nz/api-reference/catalogue-methods/retrieve-site-statistics **/
 	AverageVisitorsPerDay: number;
+	/** @deprecated https://developer.trademe.co.nz/api-reference/catalogue-methods/retrieve-site-statistics **/
 	BusiestDayOfWeek: string;
+	/** @deprecated https://developer.trademe.co.nz/api-reference/catalogue-methods/retrieve-site-statistics **/
 	ReportMonthAndYear: string;
+	/** @deprecated https://developer.trademe.co.nz/api-reference/catalogue-methods/retrieve-site-statistics **/
 	ReportSource: string;
 }
 
@@ -42,8 +27,10 @@ export default {
 		await fetch('https://api.trademe.co.nz/v1/SiteStats.json')
 			.then(value => value.json<SiteStats>())
 			.then(siteStats => {
+				const unixTimestamp = Math.floor(controller.scheduledTime / 1000);
+
 				env.DB.prepare("INSERT INTO site_stats (created_at, members_online, active_members, active_listings) VALUES (?1, ?2, ?3, ?4)")
-					.bind(controller.scheduledTime / 1000, siteStats.MembersOnline, siteStats.ActiveMembers, siteStats.ActiveListings)
+					.bind(unixTimestamp, siteStats.MembersOnline, siteStats.ActiveMembers, siteStats.ActiveListings)
 					.run()
 			})
 	},
@@ -53,7 +40,7 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
-		const { results } = await env.DB.prepare("SELECT * FROM site_stats").all()
+		const { results } = await env.DB.prepare("SELECT * FROM site_stats").all<SiteStats>()
 
 		return Response.json(results);
 	},
