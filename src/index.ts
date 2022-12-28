@@ -43,7 +43,7 @@ export default {
 			.then(value => value.json<SiteStats>())
 			.then(siteStats => {
 				env.DB.prepare("INSERT INTO site_stats (created_at, members_online, active_members, active_listings) VALUES (?1, ?2, ?3, ?4)")
-					.bind(Date.now() / 1000, siteStats.MembersOnline, siteStats.ActiveMembers, siteStats.ActiveListings)
+					.bind(controller.scheduledTime / 1000, siteStats.MembersOnline, siteStats.ActiveMembers, siteStats.ActiveListings)
 					.run()
 			})
 	},
