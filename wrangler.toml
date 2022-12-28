@@ -3,4 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2022-12-28"
 
 [triggers]
-crons = [ "1 * * * *" ]
+crons = [ "* * * * *" ]
+
+[[ d1_databases ]]
+binding = "DB" # i.e. available in your Worker on env.DB
+database_name = "trademe_api"
+database_id = "683d04a1-90ea-41b8-bece-0eabd50bacca"

@@ -19,6 +19,18 @@ export interface Env {
 	//
 	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
 	// MY_BUCKET: R2Bucket;
+	DB: D1Database;
+}
+
+interface SiteStats {
+	MembersOnline: number;
+	ActiveMembers: number,
+	ActiveListings: number;
+	AverageTimeSpent: string;
+	AverageVisitorsPerDay: number;
+	BusiestDayOfWeek: string;
+	ReportMonthAndYear: string;
+	ReportSource: string;
 }
 
 export default {
@@ -27,6 +39,22 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<void> {
-		console.log(`Hello World!`);
+		await fetch('https://api.trademe.co.nz/v1/SiteStats.json')
+			.then(value => value.json<SiteStats>())
+			.then(siteStats => {
+				env.DB.prepare("INSERT INTO site_stats (created_at, members_online, active_members, active_listings) VALUES (?1, ?2, ?3, ?4)")
+					.bind(Date.now() / 1000, siteStats.MembersOnline, siteStats.ActiveMembers, siteStats.ActiveListings)
+					.run()
+			})
+	},
+
+	async fetch(
+		request: Request,
+		env: Env,
+		ctx: ExecutionContext
+	): Promise<Response> {
+		const { results } = await env.DB.prepare("SELECT * FROM site_stats").all()
+
+		return Response.json(results);
 	},
 };
