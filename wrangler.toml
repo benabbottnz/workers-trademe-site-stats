@@ -1,0 +1,6 @@
+name = "worker-trademe-site-stats"
+main = "src/index.ts"
+compatibility_date = "2022-12-28"
+
+[triggers]
+crons = [ "1 * * * *" ]
