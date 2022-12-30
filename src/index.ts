@@ -18,6 +18,13 @@ interface SiteStats {
   ReportSource: string;
 }
 
+interface SiteStatsRow {
+  created_at: number;
+  members_online: number;
+  active_members: number;
+  active_listings: number;
+}
+
 export default {
   async scheduled(
     controller: ScheduledController,
@@ -40,7 +47,33 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<Response> {
-    const {results} = await env.DB.prepare("SELECT * FROM site_stats").all<SiteStats>()
+    const {pathname} = new URL(request.url)
+
+    let query = "";
+
+    switch (pathname) {
+      case '/api/all':
+        query = "SELECT * FROM site_stats ORDER BY created_at DESC LIMIT 50000";
+        break;
+
+      case '/api/hourly':
+        query = "SELECT strftime('%s', strftime('%Y-%m-%d %H:00:00', datetime(created_at, 'unixepoch'))) as created_at, ROUND(AVG(active_listings)) as active_listings, ROUND(AVG(members_online)) as members_online, ROUND(AVG(active_members)) as active_members FROM site_stats GROUP BY strftime('%s', strftime('%Y-%m-%d %H:00:00', datetime(created_at, 'unixepoch')))";
+        break;
+
+      case '/api/daily':
+        query = "SELECT strftime('%s', strftime('%Y-%m-%d', datetime(created_at, 'unixepoch'))) as created_at, ROUND(AVG(active_listings)) as active_listings, ROUND(AVG(members_online)) as members_online, ROUND(AVG(active_members)) as active_members FROM site_stats GROUP BY strftime('%s', strftime('%Y-%m-%d', datetime(created_at, 'unixepoch')))";
+        break;
+
+      default:
+        return new Response('<ul><li><a href="/api/all"><code>/api/all</code></a></li> <li><a href="/api/hourly"><code>/api/hourly</code></a></li> <li><a href="/api/daily"><code>/api/daily</code></a></li>', {
+          headers: {
+            'content-type': 'text/html;charset=UTF-8',
+          },
+          status: 404,
+        })
+    }
+
+    const {results} = await env.DB.prepare(query).all<SiteStatsRow>()
 
     return Response.json(results);
   },
